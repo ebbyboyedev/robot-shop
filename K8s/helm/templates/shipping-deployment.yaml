@@ -23,14 +23,16 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: 8080
+
+        args: ["java", "-Xmn256m", "-Xmx1280m", "-jar", "shipping.jar"]
         # it's Java it needs lots of memory
         resources:
           limits:
-            cpu: 200m
-            memory: 1000Mi
+            cpu: 500m
+            memory: 2000Mi
           requests:
             cpu: 100m
-            memory: 500Mi
+            memory: 1000Mi
         readinessProbe:
           httpGet:
             path: /health
