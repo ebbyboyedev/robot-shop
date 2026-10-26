@@ -17,6 +17,13 @@ spec:
       {{ if .Values.psp.enabled }}
       serviceAccountName: robot-shop
       {{ end }}
+      initContainers:
+      - name: otel-agent-download
+        image: curlimages/curl:8.10.1
+        command: ["sh", "-c", "curl -fsSL -o /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar"]
+        volumeMounts:
+        - name: otel
+          mountPath: /otel
       containers:
       - name: shipping
         image: {{ .Values.image.repo }}/rs-shipping:{{ .Values.image.version }}
@@ -25,6 +32,22 @@ spec:
         - containerPort: 8080
 
         args: ["java", "-Xmn256m", "-Xmx1280m", "-jar", "shipping.jar"]
+        env:
+        - name: JAVA_TOOL_OPTIONS
+          value: "-javaagent:/otel/opentelemetry-javaagent.jar"
+        - name: OTEL_SERVICE_NAME
+          value: shipping
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://jaeger.monitoring.svc.cluster.local:4318
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: http/protobuf
+        - name: OTEL_METRICS_EXPORTER
+          value: none
+        - name: OTEL_LOGS_EXPORTER
+          value: none
+        volumeMounts:
+        - name: otel
+          mountPath: /otel
         # it's Java it needs lots of memory
         resources:
           limits:
@@ -41,6 +64,9 @@ spec:
           periodSeconds: 5
           failureThreshold: 30
           successThreshold: 1
+      volumes:
+      - name: otel
+        emptyDir: {}
       restartPolicy: Always
       {{- with .Values.shipping.affinity }}
       affinity:
