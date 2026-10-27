@@ -39,7 +39,7 @@ The cluster itself is built from code in the Capstone 1 repository (`ebbyboyedev
   - **Errors:** `1 - avg_over_time(probe_success[5m])`
   - **Latency:** `probe_duration_seconds`
   - **Requests:** `rate(items_added[5m])`. **This is a compromise.** The cart is the only service that publishes a traffic metric, a counter of items added to carts, so request volume is shown for that one business action, not for all HTTP traffic. A `ServiceMonitor` (`monitoring/servicemonitor-cart.yaml`) scrapes it, and I added a `service: cart` label to the cart's Service in the chart so the monitor can find it.
-- The dashboard is exported to `monitoring/robot-shop-dashboard.json`.
+- The dashboard is exported to `monitoring/robot-shop-dashboard.json`. ![Grafana dashboard](docs/images/dashboard.png)
 
 ## Step 3: Logs
 
@@ -48,13 +48,13 @@ The cluster itself is built from code in the Capstone 1 repository (`ebbyboyedev
 - **Searching:**
   - By service: `{service="cart"}`
   - Errors from every service: `{job="fluent-bit"} | detected_level="error"`
-- This search found a real problem: roughly a thousand errors per hour from `web`, all caused by `shipping` failing its readiness check (see problem 4 above).
+- This search found a real problem: roughly a thousand errors per hour from `web`, all caused by `shipping` failing its readiness check (see problem 4 above). ![Loki errors](docs/images/loki-errors.png)
 
 ## Step 4: Tracing
 
 - **Jaeger** runs in the `monitoring` namespace (`monitoring/jaeger.yaml`) and stores traces in memory, so a restart loses them.
 - The **OpenTelemetry Java agent** is attached to the `shipping` service. An init container downloads the agent jar into a shared folder, and environment variables load it and send traces to Jaeger over OTLP (HTTP, port 4318).
-- A request through the shop to `shipping` produces a trace with five spans, including the database query. *(Add the screenshot of the trace here.)*
+- A request through the shop to `shipping` produces a trace with five spans, including the database query. ![Jaeger trace of a shipping request](docs/images/jaeger-trace.png)
 - **Limits:** only `shipping` is instrumented, so the trace shows one service. The instructor's OpenTelemetry Collector configuration was not available, so the agent sends traces directly to Jaeger without a Collector in between. The agent is downloaded from GitHub's "latest" release and is not pinned.
 
 ## Step 5: SLO and alert
@@ -62,7 +62,7 @@ The cluster itself is built from code in the Capstone 1 repository (`ebbyboyedev
 - **SLO:** 99% of probes against the front page succeed over 30 days. The error budget is 432 minutes. See `SLO_AND_ERROR_BUDGET_POLICY.md`.
 - **Alert:** `RobotShopWebUnavailable` fires when the front page fails its probe for one minute (`monitoring/slo-rules.yaml`). Alertmanager sends it to the `#alerts` channel of my Slack workspace, and the message links to `RUNBOOK.md`.
 - **Slack webhook:** the URL is stored only as a Kubernetes secret (`slack-webhook` in the `monitoring` namespace) and mounted into Alertmanager. It is not in Git. The secret must be created again after every cluster rebuild.
-- **Tested:** I scaled the `web` deployment to zero. The alert arrived in Slack with the runbook link. *(Add the screenshot and the times here.)*
+- **Tested:** I scaled the `web` deployment to zero. The alert arrived in Slack with the runbook link. ![Slack alert of runbook link](docs/images/slack-alert.png)
 - **Not done:** burn-rate alerts (optional in the brief).
 
 ## Step 6: Incident drill
@@ -86,3 +86,5 @@ Before a teardown: uninstall the shop and delete the `robot-shop` and `monitorin
 
 - No secrets are stored in Git. The Slack URL and the Grafana admin password live only in the cluster.
 - The shop's web service is exposed through a public load balancer while it runs, with no login in front of it.
+
+
