@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: robot-shop-slo
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+  - name: robot-shop-slo
+    rules:
+    - alert: RobotShopWebUnavailable
+      expr: probe_success{instance="http://web.robot-shop.svc:8080/"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        slo: robot-shop
+      annotations:
+        summary: "Robot Shop web front page is failing health probes."
+        runbook_url: "https://github.com/ebbyboyedev/robot-shop/blob/master/RUNBOOK.md"

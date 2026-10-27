@@ -15,3 +15,40 @@ grafana:
       memory: 256Mi
     limits:
       memory: 768Mi
+      prometheus:
+  prometheusSpec:
+    retention: 6h
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+grafana:
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 768Mi
+alertmanager:
+  alertmanagerSpec:
+    secrets:
+      - slack-webhook
+  config:
+    route:
+      receiver: "null"
+      routes:
+        - receiver: slack
+          matchers:
+            - slo = "robot-shop"
+    receivers:
+      - name: "null"
+      - name: slack
+        slack_configs:
+          - api_url_file: /etc/alertmanager/secrets/slack-webhook/url
+            channel: "#alerts"
+            send_resolved: true
+            title: '{{ .CommonLabels.alertname }}'
+            text: '{{ .CommonAnnotations.summary }} Runbook: {{ .CommonAnnotations.runbook_url }}'
