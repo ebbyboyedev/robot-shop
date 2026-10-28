@@ -13,7 +13,7 @@ The cluster itself is built from code in the Capstone 1 repository (`ebbyboyedev
 | `monitoring/robot-shop-dashboard.json` | The Grafana dashboard, exported as code |
 | `docs/SLO_AND_ERROR_BUDGET_POLICY.md` | The SLO and error budget policy |
 | `RUNBOOK.md` | The runbook the alert links to |
-| `POSTMORTEM.md` | The blameless postmortem for the incident drill (*to be added after the drill*) |
+| `POSTMORTEM.md` | The blameless postmortem for the incident drill |
 | `scripts/install-shop.sh` | Installs the shop and the load generator |
 
 ## Step 1: Deploy and watch
@@ -59,7 +59,7 @@ The cluster itself is built from code in the Capstone 1 repository (`ebbyboyedev
 
 ## Step 5: SLO and alert
 
-- **SLO:** 99% of probes against the front page succeed over 30 days. The error budget is 432 minutes. See `SLO_AND_ERROR_BUDGET_POLICY.md`.
+- **SLO:** 99% of probes against the front page succeed over 30 days. The error budget is 432 minutes. See `docs/SLO_AND_ERROR_BUDGET_POLICY.md`.
 - **Alert:** `RobotShopWebUnavailable` fires when the front page fails its probe for one minute (`monitoring/slo-rules.yaml`). Alertmanager sends it to the `#alerts` channel of my Slack workspace, and the message links to `RUNBOOK.md`.
 - **Slack webhook:** the URL is stored only as a Kubernetes secret (`slack-webhook` in the `monitoring` namespace) and mounted into Alertmanager. It is not in Git. The secret must be created again after every cluster rebuild.
 - **Tested:** I scaled the `web` deployment to zero. The alert arrived in Slack with the runbook link. ![Slack alert of runbook link](docs/images/slack-alert.png)
@@ -67,7 +67,8 @@ The cluster itself is built from code in the Capstone 1 repository (`ebbyboyedev
 
 ## Step 6: Incident drill
 
-*To be completed after the drill: what the instructor broke, how it was noticed (the alert), the mitigation, the root cause, and the link to `POSTMORTEM.md`.*
+Self-run drill.
+ I introduced a fault myself: a bad Helm release (revision 5) that changed the web Service selector, so the front page went down while all pods looked healthy. The alert reached Slack about 2 minutes later. Following RUNBOOK.md, I mitigated with helm rollback robot-shop 4 and service recovered. About 13 minutes of downtime, roughly 3% of the error budget. See POSTMORTEM.md
 
 ## Rebuilding after a teardown
 
